@@ -10,6 +10,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(Rcmdr)
 ```
 
 # 0. Carga del archivo
@@ -58,7 +59,7 @@ any(is.na(houses))
 summary(houses)
 ```
 
-# 1 Descripción del dataset
+# 1. Descripción del dataset
 
 **¿Por qué es importante y qué pregunta/problema pretende responder?**
 
@@ -67,7 +68,6 @@ Este conjunto de datos se utiliza en el segundo capítulo del libro de Aurélien
 Los datos contienen información sobre el censo de California de 1990. Aunque puede que no nos ayuden a predecir los precios actuales de la vivienda como el conjunto de datos Zillow Zestimate (https://www.kaggle.com/c/zillow-prize-1), si que proporciona un conjunto de datos introductorio y accesible para aprender los conceptos básicos del aprendizaje automático.
 
 El dataset contiene datos refrentes a casas pertenecientes a distrito determinado de California y algunas estadísticas resumidas sobre ellas basadas en los datos del censo de 1990. Debemos tener en cuenta que los datos están limpios, es decir, requieren limpieza previa.
-
 
 El dataset tiene 20640 filas y 10 columnas. Las columnas son las siguientes:
 
@@ -83,5 +83,51 @@ El dataset tiene 20640 filas y 10 columnas. Las columnas son las siguientes:
 * **oceanProximity**: ubicación de la casa con respecto al océano / mar
 
 Fuente: https://www.kaggle.com/camnugent/california-housing-prices
+
+# 2. Integración y selección de los datos de interés a analizar
+
+La integración o fusión de los datos consiste en la combinación de datos procedentes de múltiples fuentes, con el fin de crear una estructura de datos coherente y única que contenga mayor cantidad de información.
+
+Esa fusión puede hacerse de dos formas:
+
+1. De forma horizontal, añadiendo nuevos atributos a la base de datos original
+2. De forma vertical, incluyendo nuevos registros a la base de datos original
+
+**=> En este ejercicio NO vamos a incluir ningún tipo de integración de datos**
+
+La selección de datos consiste en la elección de aquellos registros y variables de interés o relevantes para el problema a resolver.
+
+En cuanto a la selección de datos para este ejercicio, nos vamos a quedar con todas las variables **salvo** longitude y latitude: ya que no nos parecen relevantes.
+
+Eliminamos las variables longitude y latitude:
+
+```{r}
+houses$longitude <- NULL
+houses$latitude <- NULL
+```
+
+Y seleccionamos (nos quedamos con) las siguientes columnas: 
+
+* housingMedianAge
+* totalRooms
+* totalBedrooms
+* population
+* households
+* medianIncome
+* medianHouseValue
+* oceanProximity
+
+
+```{r}
+names(houses)
+```
+
+```{r}
+head(houses)
+```
+
+```{r}
+summary(houses)
+```
 
 
