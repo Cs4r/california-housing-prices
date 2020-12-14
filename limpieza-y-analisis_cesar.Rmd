@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # 0. Carga del archivo
 
-Se debe abrir el archivo de datos y examinar el tipo de datos con los que R ha interpretado cada variable. Examinar también los valores resumen de cada tipo de variable.
+Se abre el archivo de datos y se examina el tipo de datos con los que R ha interpretado cada variable. Examinaremos también los valores resumen de cada tipo de variable.
 
 ```{r}
 houses = read.csv(file = './data/housing.csv')
@@ -23,3 +23,65 @@ houses = read.csv(file = './data/housing.csv')
 ```{r}
 head(houses)
 ```
+
+## 0.1 Atributos / Nombres de columna
+```{r}
+names(houses)
+```
+
+## 0.2 Dimensiones
+```{r}
+dims = dim(houses)
+dims
+```
+  
+```{r}
+print(paste("Filas: ", dims[1]))
+print(paste("Columnas: ", dims[2]))
+```
+
+## 0.3 Tipo de datos con los que R ha interpretado cada variable
+
+```{r}
+sapply(houses,class)
+```
+
+## 0.4 Comprobar si hay valores perdidos
+
+```{r}
+any(is.na(houses))
+```
+
+## 0.5 Resumen de cada tipo de variable
+
+```{r}
+summary(houses)
+```
+
+# 1 Descripción del dataset
+
+**¿Por qué es importante y qué pregunta/problema pretende responder?**
+
+Este conjunto de datos se utiliza en el segundo capítulo del libro de Aurélien Géron *'Hands-On Machine learning with Scikit-Learn and TensorFlow'*. Sirve como una excelente introducción a la implementación de algoritmos de Machine Learning porque requiere una limpieza de datos preliminar, tiene una lista de variables fácilmente comprensible y tiene un tamaño óptimo: no es demasiado de juguete y ni demasiado difícil.
+
+Los datos contienen información sobre el censo de California de 1990. Aunque puede que no nos ayuden a predecir los precios actuales de la vivienda como el conjunto de datos Zillow Zestimate (https://www.kaggle.com/c/zillow-prize-1), si que proporciona un conjunto de datos introductorio y accesible para aprender los conceptos básicos del aprendizaje automático.
+
+El dataset contiene datos refrentes a casas pertenecientes a distrito determinado de California y algunas estadísticas resumidas sobre ellas basadas en los datos del censo de 1990. Debemos tener en cuenta que los datos están limpios, es decir, requieren limpieza previa.
+
+
+El dataset tiene 20640 filas y 10 columnas. Las columnas son las siguientes:
+
+* **longitude**: una medida de qué tan al oeste está una casa; un valor más alto está más al oeste
+* **latitude**: medida de la distancia al norte de una casa; un valor más alto está más al norte
+* **housingMedianAge**: edad promedio de una casa dentro de un bloque; un número menor es un edificio más nuevo
+* **totalRooms**: número total de habitaciones dentro de un bloque
+* **totalBedrooms**: número total de dormitorios dentro de un bloque
+* **population**: número total de personas que residen dentro de un bloque
+* **households**: número total de hogares, un grupo de personas que residen dentro de una unidad de vivienda, para un bloque
+* **medianIncome**: ingresos medios para hogares dentro de un bloque de casas (medidos en decenas de miles de dólares estadounidenses)
+* **medianHouseValue**: valor medio de la vivienda para los hogares dentro de un bloque (medido en dólares estadounidenses)
+* **oceanProximity**: ubicación de la casa con respecto al océano / mar
+
+Fuente: https://www.kaggle.com/camnugent/california-housing-prices
+
+
