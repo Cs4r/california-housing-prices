@@ -1,0 +1,25 @@
+---
+title: "Práctica 2: Limpieza y análisis de datos"
+author: "César Aguilera"
+date: "14/12/2020"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 0. Carga del archivo
+
+Se debe abrir el archivo de datos y examinar el tipo de datos con los que R ha interpretado cada variable. Examinar también los valores resumen de cada tipo de variable.
+
+```{r}
+houses = read.csv(file = './data/housing.csv')
+```
+
+```{r}
+head(houses)
+```
