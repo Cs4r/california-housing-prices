@@ -369,6 +369,8 @@ El p-valor es menor a Alpha (0.05), se rechaza la hipótesis nula. La variable h
 
 ### 4.2.2 Comprobación de la normalidad para el resto de variables
 
+En esta ocasión hemos creado un programa que comprueba la normalidad de todas las variables del conjunto de datos.
+
 ```{r}
 df = houses
 alpha = 0.05
@@ -388,7 +390,10 @@ for (i in 2:ncol(df)){
 }
 ```
 
-Como vemos, ninguna de las variables sigue una distribución normal acorde al test de normalidad de Anderson-Darling.
+Como vemos, el test de normalidad de Anderson-Darling da negativo para todas las variables, es decir, ninguna sigue una distribución normal.
+
+### 4.2.3 Compración de la homogeneidad de la varianza
+
 
 ## 4.3 Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes.
 
