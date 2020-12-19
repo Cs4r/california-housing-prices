@@ -108,14 +108,14 @@ houses$latitude <- NULL
 
 Y seleccionamos (nos quedamos con) las siguientes columnas: 
 
-* housingMedianAge
-* totalRooms
-* totalBedrooms
+* housing_median_age
+* total_rooms
+* total_bedrooms
 * population
 * households
-* medianIncome
-* medianHouseValue
-* oceanProximity
+* median_income
+* median_house_value
+* ocean_proximity
 
 
 ```{r}
@@ -130,4 +130,208 @@ head(houses)
 summary(houses)
 ```
 
+# 3. Limpieza de los datos
 
+## 3.1.1 ¿Los datos contienen ceros o elementos vacíos?
+
+En este apartado vamos a investigar las variables que contengan valores perdidos (NA).
+
+```{r}
+df = houses
+ 
+for (colName in colnames(df)){
+    hasNulls = any(is.na(df[colName]))
+    if(hasNulls){
+        print(paste(colName, "tiene valores perdidos"))
+    }
+}
+```
+
+La única variable que contiene valores perdidos (NA) es total_bedrooms.
+
+```{r}
+sum(is.na(houses$total_bedrooms))
+```
+
+total_bedrooms contiene 207 valores perdidos.
+
+## 3.1.2 ¿Cómo gestionarías cada uno de estos casos?
+
+Una vez investigadas las variables que contienen valores perdidos (NA) vamos a realizar una imputación de valores.
+
+Para realizar la imputación de valores, voy a crear una función propia que realice una imputación de valores basada en la mediana del valor de la variable en el conjunto de datos.
+
+**Programa para imputar valores**
+
+Para obtener más precisión, voy a hacer la imputación solamente con datos de la misma ocean_proximity que la del registro que contiene el dato a imputar.
+
+```{r}
+
+nanIndexes = which(is.na(df$total_bedrooms))
+medians = c()
+pos = 1
+
+# Compute medians and store them in a vector
+for (index in nanIndexes){
+    proximity = houses$ocean_proximity[index]
+
+    # cut slice, with proximity
+    slice = subset(houses, houses$ocean_proximity == proximity)$total_bedrooms
+    
+    # Compute the median of the slice
+    sliceMedian = median(slice, na.rm = TRUE)
+
+    # Store median
+    medians[pos] = sliceMedian
+    pos = pos + 1
+}
+
+pos = 1
+
+# Set the values from medians vector
+for(index in nanIndexes){
+    houses$total_bedrooms[index] = medians[pos]
+    pos = pos + 1
+}
+
+```
+  
+Muestra del resultado de la imputación en aquellos casos donde había un NA.
+
+```{r}
+
+i = 0
+
+for (index in nanIndexes){
+  print(sprintf("total_bedrooms[%d] set to %0.2f", index, houses$total_bedrooms[index]))
+  i = i +1
+  if(i == 21) break
+}
+
+```
+
+
+## 3.2. Identificación y tratamiento de valores extremos
+
+### 3.2.1 Identificación de valores extremos
+
+```{r}
+
+print(paste("La variable housing_median_age tiene", length(boxplot.stats(houses$housing_median_age)$out), "valores perdidos"))
+
+print(paste("La variable total_rooms tiene", length(boxplot.stats(houses$total_rooms)$out), "valores perdidos"))
+
+print(paste("La variable total_bedrooms tiene", length(boxplot.stats(houses$total_bedrooms)$out), "valores perdidos"))
+
+print(paste("La variable population tiene", length(boxplot.stats(houses$population)$out), "valores perdidos"))
+
+print(paste("La variable households tiene", length(boxplot.stats(houses$households)$out), "valores perdidos"))
+
+print(paste("La variable median_income tiene", length(boxplot.stats(houses$median_income)$out), "valores perdidos"))
+
+print(paste("La variable median_house_value tiene", length(boxplot.stats(houses$median_house_value)$out), "valores perdidos"))
+
+
+```
+
+Las variables con valores extremos son:
+
+* total_rooms
+* total_bedrooms
+* population
+* households
+* median_income
+* median_house_value
+
+
+### 3.2.2 Tratamiento de valores extremos
+
+En esta seccion vamos a sustituir valores atípicos por la mediana de la correspondiente variable.
+
+**Variable total_rooms**
+
+```{r}
+
+outliers = boxplot.stats(houses$total_rooms)$out
+
+for (out in outliers){
+  houses$total_rooms[houses$total_rooms == out] <- median(houses$total_rooms)
+}
+
+```
+
+**Variable total_bedrooms**
+
+```{r}
+
+outliers = boxplot.stats(houses$total_bedrooms)$out
+
+for (out in outliers){
+  houses$total_bedrooms[houses$total_bedrooms == out] <- median(houses$total_bedrooms)
+}
+
+```
+  
+**Variable population**
+
+```{r}
+
+outliers = boxplot.stats(houses$population)$out
+
+for (out in outliers){
+  houses$population[houses$population == out] <- median(houses$population)
+}
+
+```
+
+**Variable households**
+
+```{r}
+
+outliers = boxplot.stats(houses$households)$out
+
+for (out in outliers){
+  houses$households[houses$households == out] <- median(houses$households)
+}
+
+```
+
+**Variable median_income**
+
+```{r}
+
+outliers = boxplot.stats(houses$median_income)$out
+
+for (out in outliers){
+  houses$median_income[houses$median_income == out] <- median(houses$median_income)
+}
+
+```
+
+**Variable median_house_value**
+
+```{r}
+
+outliers = boxplot.stats(houses$median_house_value)$out
+
+for (out in outliers){
+  houses$median_house_value[houses$median_house_value == out] <- median(houses$median_house_value)
+}
+
+```
+
+
+# 4. Análisis de los datos
+
+## 4.1. Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar)
+
+
+## 4.2. Comprobación de la normalidad y homogeneidad de la varianza
+
+## 4.3 Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes.
+
+
+# 5. Representación de los resultados a partir de tablas y gráficas 
+
+
+# 6. Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
