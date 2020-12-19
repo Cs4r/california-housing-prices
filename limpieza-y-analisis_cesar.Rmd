@@ -11,6 +11,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(Rcmdr)
+library(nortest)
 ```
 
 # 0. Carga del archivo
@@ -215,24 +216,21 @@ for (index in nanIndexes){
 
 ### 3.2.1 Identificación de valores extremos
 
+En esta sección vamos a crear un programita que nos diga qué variables tienen valores extremos.
+
+
 ```{r}
+df = houses
 
-print(paste("La variable housing_median_age tiene", length(boxplot.stats(houses$housing_median_age)$out), "valores perdidos"))
-
-print(paste("La variable total_rooms tiene", length(boxplot.stats(houses$total_rooms)$out), "valores perdidos"))
-
-print(paste("La variable total_bedrooms tiene", length(boxplot.stats(houses$total_bedrooms)$out), "valores perdidos"))
-
-print(paste("La variable population tiene", length(boxplot.stats(houses$population)$out), "valores perdidos"))
-
-print(paste("La variable households tiene", length(boxplot.stats(houses$households)$out), "valores perdidos"))
-
-print(paste("La variable median_income tiene", length(boxplot.stats(houses$median_income)$out), "valores perdidos"))
-
-print(paste("La variable median_house_value tiene", length(boxplot.stats(houses$median_house_value)$out), "valores perdidos"))
-
-
+for (i in 1:ncol(df)){
+    if(!is.numeric(df[,names(houses)[i]])){
+      next
+    }
+  
+   print(paste("La variable", names(houses)[i] , "tiene", length(boxplot.stats((df[,names(houses)[i]]))$out), "valores perdidos"))
+}
 ```
+
 
 Las variables con valores extremos son:
 
@@ -327,6 +325,70 @@ for (out in outliers){
 
 
 ## 4.2. Comprobación de la normalidad y homogeneidad de la varianza
+
+### 4.2.0 Compración de la normalidad
+
+**Hipótesis**
+
+* H0: La muestra proviene de una distribución normal
+* H1: La muestra no proviene de una distribución normal
+
+Para pruebas de normalidad siempre se plantean así las hipótesis.
+
+**Nivel de Significancia**
+
+El nivel de significancia que se trabajará es de 0.05. Alfa=0.05
+
+**Criterio de Decisión**
+
+Si P < Alfa Se rechaza H0
+
+Si p >= Alfa NO se rechaza H0
+
+Donde P = p-valor
+
+**Test a aplicar**
+
+Vamos a aplicar el test de normalidad de Anderson-Darling, que funciona para variables con mas de 5000 muestras.
+
+### 4.2.1 Comprobación de la normalidad de la variable housing_median_age
+
+```{r}
+hist(houses$housing_median_age)
+```
+
+A primera vista el histograma no nos dice mucho si la variable sigue una distribución normal o no.
+
+Apliquemos ahora el test de normalidad.
+
+```{r}
+ad.test(houses$housing_median_age)
+```
+
+El p-valor es menor a Alpha (0.05), se rechaza la hipótesis nula. La variable housing_median_age NO sigue un distribución normal.
+
+### 4.2.2 Comprobación de la normalidad para el resto de variables
+
+```{r}
+df = houses
+alpha = 0.05
+ 
+for (i in 2:ncol(df)){
+    if(!is.numeric(df[,names(houses)[i]])){
+      next
+    }
+  
+    p = ad.test(df[,names(houses)[i]])$p.value
+    
+    if (p < alpha){
+      print(paste(names(df)[i], "NO sigue una distribución normal"))
+    }else if(p>=alpha){
+      print(paste(names(df)[i], "SIGUE una distribución normal"))
+    }
+}
+```
+
+Como vemos, ninguna de las variables sigue una distribución normal acorde al test de normalidad de Anderson-Darling.
 
 ## 4.3 Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes.
 
