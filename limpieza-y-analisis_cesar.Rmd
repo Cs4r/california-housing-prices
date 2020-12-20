@@ -74,13 +74,13 @@ El dataset tiene 20640 filas y 10 columnas. Las columnas son las siguientes:
 
 * **longitude**: una medida de qué tan al oeste está una casa; un valor más alto está más al oeste
 * **latitude**: medida de la distancia al norte de una casa; un valor más alto está más al norte
-* **housingMedianAge**: edad promedio de una casa dentro de un bloque; un número menor es un edificio más nuevo
-* **totalRooms**: número total de habitaciones dentro de un bloque
-* **totalBedrooms**: número total de dormitorios dentro de un bloque
+* **housing_median_age**: edad promedio de una casa dentro de un bloque; un número menor es un edificio más nuevo
+* **total_rooms**: número total de habitaciones dentro de un bloque
+* **total_bedrooms**: número total de dormitorios dentro de un bloque
 * **population**: número total de personas que residen dentro de un bloque
 * **households**: número total de hogares, un grupo de personas que residen dentro de una unidad de vivienda, para un bloque
-* **medianIncome**: ingresos medios para hogares dentro de un bloque de casas (medidos en decenas de miles de dólares estadounidenses)
-* **medianHouseValue**: valor medio de la vivienda para los hogares dentro de un bloque (medido en dólares estadounidenses)
+* **median_income**: ingresos medios para hogares dentro de un bloque de casas (medidos en decenas de miles de dólares estadounidenses)
+* **median_house_value**: valor medio de la vivienda para los hogares dentro de un bloque (medido en dólares estadounidenses)
 * **oceanProximity**: ubicación de la casa con respecto al océano / mar
 
 Fuente: https://www.kaggle.com/camnugent/california-housing-prices
@@ -323,6 +323,13 @@ for (out in outliers){
 
 ## 4.1. Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar)
 
+En esta sección hemos elegido distintos grupos de datos.
+
+Primeramente, escogemos todas las variables para comprobar cuales siguen una distribución normal y cuales no.
+
+Seguidamente seleccionamos la variable población (population) para estudiar la homogeneidad de su varianza dependiendo de si la población está cerca de la bahía o cerca del océano.
+
+Finalmente elegimos las variables median_income y median_house_value para estudiar si existe o no correlación entre ambas.
 
 ## 4.2. Comprobación de la normalidad y homogeneidad de la varianza
 
@@ -423,15 +430,227 @@ b <- houses[houses$ocean_proximity =="NEAR OCEAN", "population"]
 fligner.test(x = list(a,b))
 ```
 
-El p-valor es menor a Alpha (0.05), se rechaza la hipótesis nula. El test encuentra diferencias significativas entre las varianzas de los dos grupos.
+El p-valor (0.006041) es menor a Alpha (0.05), se rechaza la hipótesis nula. El test encuentra diferencias significativas entre las varianzas de los dos grupos.
 
 ## 4.3 Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes.
 
+Primeramente vamos a empezar calculando el intervalo de confianza para la media de la variable median_house_value. El intervalo de confianza permite calcular dos valores alrededor de una media muestral (uno superior y otro inferior). Estos dos valores van a acotar un rango dentro del cual, con una determinada probabilidad, se va a localizar el parámetro de la media poblacional.
+
+**El intervalo de confianza calculado será por defecto del 95%.
+
+```{r}
+t.test(houses$median_house_value)
+```
+
+El intervalo de confianza para la variables median_house_value nos indica que la probabilidad de que la media poblacional *μ* pertenezca a un intervalo de la forma: [186393.3, 189033.3] es de 0.95. O lo que es lo mismo: noventa y cinco de cada cien veces que escogemos una muestra aleatoria simple y calculamos el valor de la media muestral, el intervalo que obtendremos sustituyendo el valor de X̅̄ por la media correspondiente a la muestra de la que disponemos contendrá el verdadero valor de *μ*.
+
+Seguidamente vamos a utilizar el contraste de hipótesis para evaluar si el valor medio de la vivienda para los hogares dentro de un bloque (median_house_value) es superior en los bloques cerca de la bahía con respecto a los que NO están cerca de la bahía.
+
+
+```{r}
+nearBay <- houses[houses$ocean_proximity == "NEAR BAY", "median_house_value"]
+farBay <- houses[houses$ocean_proximity != "NEAR BAY", "median_house_value"]
+```
+
+**Hipótesis nula**
+
+La hipótesis nula (H0) afirma que los valores de las medias de las dos poblaciones son iguales. Es decir, la media poblacional del valor medio de la vivienda para los hogares dentro de un bloque es igual en los bloques cerca de la bahía que los que NO están cerca de la bahía: *μ1* = *μ2*.
+
+Otra manera de ver la hipótesis nula es *μ1* - *μ2* = 0.
+
+**Hipótesis alternativa**
+
+La hipotesis alternativa (H1) afirma que la media de la población 1 es superior a la media de la población 2. Es decir, que la media el del valor medio de la vivienda para los hogares dentro de un bloque (median_house_value) es superior en los bloques cerca de la bahía con respecto a los que NO están cerca de la bahía.: *μ1* > *μ2*
+
+Otra manera de ver la hipótesis alternativa es *μ1* - *μ2* > 0.
+
+**Test a aplicar**
+
+Dado que no podemos asegurar que la variable median_house_value siga una distribuación normal, sólo podremos contrastar la diferencia de medias si los tamaños de las muestras son superiores a treinta => que en este caso se cumple.
+
+En resumen, el test a aplicar es el contraste sobre la diferencia de medias en el caso de tener muestras grandes no normales.
+
+**Cálculos**
+
+Con un nivel de significación del 5%, ¿podemos asegurar que el valor medio de la vivienda es el mismo?
+
+```{r}
+x1 = mean(nearBay)
+s1 = sd(nearBay)
+n1 = length(nearBay)
+
+x2 = mean(farBay)
+s2 = sd(farBay)
+n2 = length(farBay)
+
+alpha = 0.05
+
+# estadístico de contraste
+z = (x1-x2)/sqrt((s1*s1)/n1 + (s2*s2)/n2)
+
+# p-valor
+p = 1 - pnorm(z)
+
+print(paste("p-value is", p))
+
+if(p < alpha){ 
+  print("p less than alpha")
+} else if (p == alpha){
+  print("p equal to alpha")
+} else {print("p greater than alpha")}
+```
+
+El p-valor obtenido es cero. Y en concreto menor que el nivel de significación. 
+
+Diremos que el p-valor es significativo y rechazamos la hipótesis nula en favor de la hipótesis alternativa. Por ende se puede afirmar que el valor medio de la vivienda para los hogares dentro de un bloque (median_house_value) es superior en los bloques cerca de la bahía con respecto a los que NO están cerca de la bahía, y esto se afirma con un 95% de nivel de confianza.
+
+Finalmente, vamos a hallar la correlación entre los ingresos medios para hogares dentro de un bloque de casas (median_income)
+y el valor medio de la vivienda para los hogares dentro de un bloque (median_house_value). Para ello vamos a calcular el coeficiente de correlación de Pearson, que es independiente de la escala de medida de las variables.
+
+El coeficiente de correlación de Pearson es como un índice que puede utilizarse para medir el grado de relación de dos variables siempre y cuando ambas sean cuantitativas y continuas.
+
+```{r}
+cor.test(houses$median_income, houses$median_house_value, method=c("pearson"))
+```
+
+En este caso el coeficiente de correlación de Pearson (r) está entre 0 y 1, en concreto 0.58. Podemos decir que existe una correlación positiva entre median_income y median_house_value, aunque dicha correlación es débil.
 
 
 # 5. Representación de los resultados a partir de tablas y gráficas 
 
+## 5.1 Descriptiva y visualización
+
+A continuación vamos a realizar una visualización gráfica de los datos del conjunto de datos. También explicaremos brevemente los gráficos y lo que se puede observar a partir de ellos.
+
+### 5.1.1 Histogramas
+
+```{r}
+par(mfrow=c(1,3))
+
+hist(houses$housing_median_age,
+main="Histograma de housing_median_age",     
+xlab="edad promedio de una casa dentro de un bloque",
+ylab="Frecuencia",
+col="cornflowerblue",
+)
 
 
+hist(houses$total_rooms,
+main="Histograma de total_rooms",     
+xlab="número de habitaciones dentro de un bloque",
+ylab="Frecuencia",
+col="cornflowerblue",
+)
+
+hist(houses$total_bedrooms,
+main="Histograma de total_bedrooms",     
+xlab="número de dormitorios dentro de un bloque",
+ylab="Frecuencia",
+col="cornflowerblue",
+)
+
+###### 
+
+hist(houses$population,
+main="Histograma de population",       
+xlab="número de personas que residen dentro de un bloque",
+ylab="Frecuencia",
+col="firebrick1",
+)
+
+hist(houses$households,
+main="Histograma de households",       
+xlab="número total de hogares",
+ylab="Frecuencia",
+col="firebrick1",
+)
+
+hist(houses$median_income,
+main="Histograma de median_income",       
+xlab="ingresos medios para hogares dentro de un bloque de casas",
+ylab="Frecuencia",
+col="firebrick1",
+)
+
+####
+
+hist(houses$median_house_value,
+main="Histograma de median_house_value",       
+xlab="valor medio de la vivienda para los hogares dentro de un bloque",
+ylab="Frecuencia",
+col="darkseagreen1",
+)
+
+```
+
+### 5.1.2 Gráficos de barras
+
+```{r}
+par(mfrow=c(1,1))
+
+Barplot(houses$ocean_proximity, main= "Gráfico de barras para ocean_proximity", xlab="ubicación de la casa con respecto al océano / mar", ylab="Frecuencia", col="cornflowerblue")
+```
+
+### 5.1.3 Diagramas de caja
+
+```{r}
+par(mfrow=c(1,3))
+
+boxplot(houses$housing_median_age, ylab = "housing_median_age", col = "cornflowerblue")
+boxplot(houses$total_rooms, ylab = "total_rooms", col = "cornflowerblue")
+boxplot(houses$total_bedrooms, ylab = "total_bedrooms", col = "cornflowerblue")
+```
+
+En el gráfico de **housing_median_age** se observa una mediana aproximada de 29, un mínimo de 1, un máximo de 52 y ningún valor atípico.
+
+En el gráfico de **total_rooms** se observa una mediana aproximada de 2127, un mínimo de 2, un máximo de 5694 y numerosos valores atípicos entre 4883 y 5694.
+
+En el gráfico de **total_bedrooms** se observa una mediana de 435, un mínimo de 1, un máximo de 1163 y numerosos valores atípicos entre 993 y 1163.
+
+```{r}
+par(mfrow=c(1,3))
+boxplot(houses$population, ylab = "population", col = "firebrick1")
+boxplot(houses$households, ylab = "households", col = "firebrick1")
+boxplot(houses$median_income, ylab = "median_income", col = "firebrick1")
+```
+
+En el gráfico de **population** se observa una mediana de 1166, un mínimo de 3, un máximo de 3132 y numerosos valores atípicos por encima del máximo.
+
+El gráfico de **households** presenta numerosos valores atípicos en el rango [941, 1092]. La mediana es 409, el mínimo 1 y el máximo 1092.
+
+En el gráfico de **median_income** se observa una mediana aproximada de 3.53, un mínimo de 0.5, un máximo de 8.01 y 247 valores atípicos en el rango [7.52, 8.0137].
+
+```{r}
+par(mfrow=c(1,3))
+boxplot(houses$median_house_value, ylab = "median_house_value", col = "darkseagreen1")
+```
+
+En el gráfico de **median_house_value** se observa una mediana aproximada de 179700, un mínimo de 14999, un máximo de 482200 y 435 valores atípicos en el rango [424400, 482200].
+
+
+### 5.1.2 Gráficos cirulares
+
+```{r}
+
+customPie <- function(slices, theTitle) {
+  lbls = levels(slices)
+  slices = table(slices)
+  pct <- round(slices/sum(slices)*100)
+  lbls <- paste(lbls, pct) # add percents to labels
+  lbls <- paste(lbls,"%",sep="") # ad % to labels
+  pie(slices,labels = lbls, col=rainbow(length(lbls)),main=theTitle)
+}
+```
+
+```{r}
+
+customPie(houses$ocean_proximity, "ubicación de la casa con respecto al océano / mar")
+
+```
+
+En el gráfico de **ocean_proximity** se aprecia que el valor que más aparece es *Ocean*, con el 44% de la veces, seguido del valor *Inland* que aparece el 32% de las veces, el valor *Near ocean* con un 13%, el valor **Near bay* con un 11% y finalmente el valor *Island* que aparece el 0.00024%. 
 
 # 6. Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
+
+
+
