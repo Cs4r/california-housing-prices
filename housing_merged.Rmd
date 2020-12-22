@@ -1,11 +1,18 @@
 ---
-title: "Práctica 2: Limpieza y análisis de datos"
-author: "César Aguilera"
-date: "14/12/2020"
+title: 'Práctica 2: Limpieza y análisis de datos'
+author: "Autor: César Aguilera y Daniel Velasco"
+date: "Diciembre 2020"
 output:
+  pdf_document:
+    highlight: zenburn
+    toc: yes
   html_document:
-    df_print: paged
-  pdf_document: default
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -13,6 +20,14 @@ knitr::opts_chunk$set(echo = TRUE)
 library(Rcmdr)
 library(nortest)
 ```
+
+******
+# Introducción  
+
+En esta práctica se elabora un caso práctico orientado a aprender a identificar los datos
+relevantes para un proyecto analítico y usar las herramientas de integración, limpieza, validación y análisis de las mismas.
+
+****** 
 
 # 0. Carga del archivo
 
@@ -87,7 +102,7 @@ Fuente: https://www.kaggle.com/camnugent/california-housing-prices
 
 # 2. Integración y selección de los datos de interés a analizar
 
-La integración o fusión de los datos consiste en la combinación de datos procedentes de múltiples fuentes, con el fin de crear una estructura de datos coherente y única que contenga mayor cantidad de información.
+La **integración o fusión** de los datos consiste en la combinación de datos procedentes de múltiples fuentes, con el fin de crear una estructura de datos coherente y única que contenga mayor cantidad de información.
 
 Esa fusión puede hacerse de dos formas:
 
@@ -96,88 +111,66 @@ Esa fusión puede hacerse de dos formas:
 
 **=> En este ejercicio NO vamos a incluir ningún tipo de integración de datos**
 
-La selección de datos consiste en la elección de aquellos registros y variables de interés o relevantes para el problema a resolver.
+La **selección** de datos consiste en la elección de aquellos registros y variables de interés o relevantes para el problema a resolver.
 
-En cuanto a la selección de datos para este ejercicio, nos vamos a quedar con todas las variables **salvo** longitude y latitude: ya que no nos parecen relevantes.
-
-Eliminamos las variables longitude y latitude:
+En este paso intentaremos seleccionar solo las caracteristicas de cada muestra que creamos aportan valor en la busqueda de nuestro objetivo, predecir el precio de las casas en base a sus características. En nuestro caso todos los atributos pueden ser muy utiles a primera vista ya que pensamos que el precio de una casa vendra determinado por su localizacion (latitud, longitud, proximidad al oceano), su tamaño (numero de habitaciones, dormitorios, numero de casas por bloque), su edad... pero de entre todos ellos podriamos eliminar *"population"* ya que el numero de personas en media que vivira en un bloque de casas sera directamente proporcional al tamaño y por tanto se podria eliminar.
+Podemos hacer un analisis rapido de la correlacion mediante el analisis del coeficiente de Pearson para demostrarlo.
 
 ```{r}
-houses$longitude <- NULL
-houses$latitude <- NULL
+library("ggpubr")
+ggscatter(houses, x = "households", y = "population", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Numero de casas", ylab = "Numero de residentes")
 ```
+ 
+Por tanto eliminamos la columna de *"population"*.  
 
-Y seleccionamos (nos quedamos con) las siguientes columnas: 
-
-* housing_median_age
-* total_rooms
-* total_bedrooms
-* population
-* households
-* median_income
-* median_house_value
-* ocean_proximity
-
-
+Ademas debido a su mas que probable correlacion con la columna *ocean_proximity*, decidimos eliminar la longitud y latitud donde se localiza las casas.
+ 
 ```{r}
-names(houses)
-```
-
-```{r}
+houses <- houses[ , -which(names(houses) %in% c("longitude","latitude","population"))]
 head(houses)
 ```
-
-```{r}
-summary(houses)
-```
+ 
 
 # 3. Limpieza de los datos
-
-## 3.1.1 ¿Los datos contienen ceros o elementos vacíos?
-
-En este apartado vamos a investigar las variables que contengan valores perdidos (NA).
-
-```{r}
-df = houses
  
-for (colName in colnames(df)){
-    hasNulls = any(is.na(df[colName]))
-    if(hasNulls){
-        print(paste(colName, "tiene valores perdidos"))
-    }
-}
-```
-
-La única variable que contiene valores perdidos (NA) es total_bedrooms.
+## 3.1.1 ¿Los datos contienen ceros o elementos vacíos?
+ 
+En este apartado buscamos los valores del dataset nulos y vacios. Para un correcto procesado a continuacion habrá que realizar un analisis de que valores son nulos y como se pueden tratar, llegado el caso se podrian inputar valores de la media o mediana, asi como eliminar las muestras con valores nulos.
 
 ```{r}
-sum(is.na(houses$total_bedrooms))
+# Obtenemos la cantidad de valores NA dentro de nuestro dataset por cada una de las columnas
+sapply(houses, function(x) sum(is.na(x)))
 ```
 
-total_bedrooms contiene 207 valores perdidos.
+Podemos apreciar que hay **207** valores nulos en la columna *total_bedrooms*.
 
 ## 3.1.2 ¿Cómo gestionarías cada uno de estos casos?
+ 
+Como hemos visto en el apartado anterior nos encontramos con 207 valores nulos en *total_bedrooms* pero ya que el resto de columnas no tienen valores NA decidimos imputar valores aproximados dependiendo del valor total de habitaciones ya que pensamos que el numero de dormitorios estara directamente relacionado con el total de habitaciones.
 
-Una vez investigadas las variables que contienen valores perdidos (NA) vamos a realizar una imputación de valores.
-
-Para realizar la imputación de valores, voy a crear una función propia que realice una imputación de valores basada en la mediana del valor de la variable en el conjunto de datos.
-
-**Programa para imputar valores**
-
-Para obtener más precisión, voy a hacer la imputación solamente con datos de la misma ocean_proximity que la del registro que contiene el dato a imputar.
+Para ello primero identificamos las posiciones de los valores NA dentro de nuestro dataset.
 
 ```{r}
+#obtenemos los indices de las muestras donde total_bedrooms es NA
+nanIndexes= which(is.na(houses$total_bedrooms))
+nanIndexes
+```
+ 
+Decidimos por tanto inputar valores medios de numero de dormitorios de las casas de tamaño similar en la ciudad. Para ello usamos el siguiente script en el que se divide el dataset en grupos de muestras que tienen el mismo numero de habitaciones totales que la muestra a ser inputada, y se obtiene la media del numero de dormitorios. Este valor es el que se inputa.
 
-nanIndexes = which(is.na(df$total_bedrooms))
+```{r}
 medians = c()
 pos = 1
 
 # Compute medians and store them in a vector
 for (index in nanIndexes){
-    proximity = houses$ocean_proximity[index]
+    tot_rooms = houses$total_rooms[index]
 
-    # cut slice, with proximity
-    slice = subset(houses, houses$ocean_proximity == proximity)$total_bedrooms
+    # cut slice, with same zone and area
+    slice = subset(houses, houses$total_rooms == tot_rooms)$total_bedrooms
     
     # Compute the median of the slice
     sliceMedian = median(slice, na.rm = TRUE)
@@ -195,20 +188,15 @@ for(index in nanIndexes){
     pos = pos + 1
 }
 
+#remove the NA values if any
+houses <- na.omit(houses) 
 ```
-  
-Muestra del resultado de la imputación en aquellos casos donde había un NA.
+
+Comprobamos el numero de NA de nuevo en nuestro dataset y vemos que **ahora ya no hay valores NA**.
 
 ```{r}
-
-i = 0
-
-for (index in nanIndexes){
-  print(sprintf("total_bedrooms[%d] set to %0.2f", index, houses$total_bedrooms[index]))
-  i = i +1
-  if(i == 21) break
-}
-
+# Obtenemos la cantidad de valores NA dentro de nuestro dataset por cada una de las columnas
+sapply(houses, function(x) sum(is.na(x)))
 ```
 
 
@@ -216,108 +204,78 @@ for (index in nanIndexes){
 
 ### 3.2.1 Identificación de valores extremos
 
-En esta sección vamos a crear un programita que nos diga qué variables tienen valores extremos.
+Ahora vamos a proceder al analisis de los valores extremos, este estudio permite identificar valores que debido a su lejania a la media estadistica se pueden considerar como no validos ya que ademas podrian afectar al analisis negativamente agregando una distorsion no deseable.
 
+Para el analisis podemos usar los graficos de cajas donde se identifica la media el primer y tercer cuartil asi como el rango de hasta el 1.5*IQR (InterQuantile Range). Cualquier valor mas alejado de este rango se considerará outlier.
 
-```{r}
-df = houses
+Podemos ver que las columnas analizadas a continuación tienen valores outliers (fuera del rango 3Q+1.5IQR) y debido a la cantidad de valores outliers estimamos que la mejor manera de solucionar el problema sería **modificando los valores extremos por el valor del 3º cuartil + 1.5 veces el IQR (interquartile range)**
 
-for (i in 1:ncol(df)){
-    if(!is.numeric(df[,names(houses)[i]])){
-      next
-    }
-  
-   print(paste("La variable", names(houses)[i] , "tiene", length(boxplot.stats((df[,names(houses)[i]]))$out), "valores perdidos"))
-}
+```{r fig1, fig.height = 10, fig.width = 10}
+total_rooms <- houses$total_rooms
+total_bedrooms <- houses$total_bedrooms
+households <- houses$households
+median_income <- houses$median_income
+par(mfrow=c(4,2))
+hist(total_rooms)
+boxplot(total_rooms, horizontal=TRUE)
+hist(total_bedrooms)
+boxplot(total_bedrooms, horizontal=TRUE)
+hist(households)
+boxplot(households, horizontal=TRUE)
+hist(median_income)
+boxplot(median_income, horizontal=TRUE)
 ```
-
-
-Las variables con valores extremos son:
-
-* total_rooms
-* total_bedrooms
-* population
-* households
-* median_income
-* median_house_value
-
 
 ### 3.2.2 Tratamiento de valores extremos
 
-En esta seccion vamos a sustituir valores atípicos por la mediana de la correspondiente variable.
-
-**Variable total_rooms**
+Primeramente escribimos una funcion en la cual dada una columna de nuestro dataframe obtiene el valor máximo para considerar al valor como outlier (en base a su IQR y tercer cuartil) e inputa este valor maximo a todos los outliers de la columna.
 
 ```{r}
-
-outliers = boxplot.stats(houses$total_rooms)$out
-
-for (out in outliers){
-  houses$total_rooms[houses$total_rooms == out] <- median(houses$total_rooms)
+# reemplazo de outliers
+outliersReplace <- function(dataColumn){
+  summ_col = summary(dataColumn)
+  iqr = summ_col["3rd Qu."]-summ_col["1st Qu."]
+  highLimit = summ_col["3rd Qu."] + 1.5 * iqr
+  dataColumn[dataColumn > highLimit] <- highLimit
+  dataColumn     #devolvemos la columna     
 }
-
 ```
 
-**Variable total_bedrooms**
+Aplicamos la funcion a todas las columnas con outliers.
 
 ```{r}
-
-outliers = boxplot.stats(houses$total_bedrooms)$out
-
-for (out in outliers){
-  houses$total_bedrooms[houses$total_bedrooms == out] <- median(houses$total_bedrooms)
-}
-
+houses$total_rooms <- outliersReplace(houses$total_rooms)
+houses$total_bedrooms <- outliersReplace(houses$total_bedrooms)
+houses$households <- outliersReplace(houses$households)
+houses$median_income <- outliersReplace(houses$median_income)
 ```
-  
-**Variable population**
+
+Vemos de nuevo los histogramas y los outliers en los diagramas de caja. Comprobando que ahora ya no existen outliers y que estos se han concentrado en el rango del Q3.
+
+```{r fig2, fig.height = 10, fig.width = 10}
+total_rooms <- houses$total_rooms
+total_bedrooms <- houses$total_bedrooms
+households <- houses$households
+median_income <- houses$median_income
+par(mfrow=c(4,2))
+hist(total_rooms)
+boxplot(total_rooms, horizontal=TRUE)
+hist(total_bedrooms)
+boxplot(total_bedrooms, horizontal=TRUE)
+hist(households)
+boxplot(households, horizontal=TRUE)
+hist(median_income)
+boxplot(median_income, horizontal=TRUE)
+```
+
+## 3.3. Exportacion de los datos preprocesados
+
+Una vez realizado todo el preprocesado con los datos podemos guardarlos en este momento en un CSV.
 
 ```{r}
-
-outliers = boxplot.stats(houses$population)$out
-
-for (out in outliers){
-  houses$population[houses$population == out] <- median(houses$population)
-}
-
+# Exportamos los datos una vez estan libres de NA y sin outliers
+write.csv(houses, "./data/housing_preprocessed.csv")
 ```
-
-**Variable households**
-
-```{r}
-
-outliers = boxplot.stats(houses$households)$out
-
-for (out in outliers){
-  houses$households[houses$households == out] <- median(houses$households)
-}
-
-```
-
-**Variable median_income**
-
-```{r}
-
-outliers = boxplot.stats(houses$median_income)$out
-
-for (out in outliers){
-  houses$median_income[houses$median_income == out] <- median(houses$median_income)
-}
-
-```
-
-**Variable median_house_value**
-
-```{r}
-
-outliers = boxplot.stats(houses$median_house_value)$out
-
-for (out in outliers){
-  houses$median_house_value[houses$median_house_value == out] <- median(houses$median_house_value)
-}
-
-```
-
 
 # 4. Análisis de los datos
 
@@ -327,7 +285,7 @@ En esta sección hemos elegido distintos grupos de datos.
 
 Primeramente, escogemos todas las variables para comprobar cuales siguen una distribución normal y cuales no.
 
-Seguidamente seleccionamos la variable población (population) para estudiar la homogeneidad de su varianza dependiendo de si la población está cerca de la bahía o cerca del océano.
+Seguidamente seleccionamos la variable "numero de casas" (households) para estudiar la homogeneidad de su varianza dependiendo de si la población está cerca de la bahía o cerca del océano.
 
 Finalmente elegimos las variables median_income y median_house_value para estudiar si existe o no correlación entre ambas.
 
@@ -425,12 +383,12 @@ Vamos a aplicar el test de Fligner-Killeen puesto que es uno de los más adecuad
 ### 4.2.4 Compración de la homogeneidad de la varianza de población entre casas cerca de la bahía y cerca del océano
 
 ```{r}
-a <- houses[houses$ocean_proximity =="NEAR BAY", "population"]
-b <- houses[houses$ocean_proximity =="NEAR OCEAN", "population"]
+a <- houses[houses$ocean_proximity =="NEAR BAY", "households"]
+b <- houses[houses$ocean_proximity =="NEAR OCEAN", "households"]
 fligner.test(x = list(a,b))
 ```
 
-El p-valor (0.006041) es menor a Alpha (0.05), se rechaza la hipótesis nula. El test encuentra diferencias significativas entre las varianzas de los dos grupos.
+El p-valor (0.097) es menor a Alpha (0.05), se confirma la hipótesis nula. Las varianzas son iguales entre los dos grupos (cerca del mar y lejos del mar).
 
 ## 4.3 Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes.
 
@@ -442,7 +400,7 @@ Primeramente vamos a empezar calculando el intervalo de confianza para la media 
 t.test(houses$median_house_value)
 ```
 
-El intervalo de confianza para la variables median_house_value nos indica que la probabilidad de que la media poblacional *μ* pertenezca a un intervalo de la forma: [186393.3, 189033.3] es de 0.95. O lo que es lo mismo: noventa y cinco de cada cien veces que escogemos una muestra aleatoria simple y calculamos el valor de la media muestral, el intervalo que obtendremos sustituyendo el valor de X̅̄ por la media correspondiente a la muestra de la que disponemos contendrá el verdadero valor de *μ*.
+El intervalo de confianza para la variables median_house_value nos indica que la probabilidad de que la media poblacional *μ* pertenezca a un intervalo de la forma: [205256.9, 208406.7] es de 0.95. O lo que es lo mismo: noventa y cinco de cada cien veces que escogemos una muestra aleatoria simple y calculamos el valor de la media muestral, el intervalo que obtendremos sustituyendo el valor de X̅̄ por la media correspondiente a la muestra de la que disponemos contendrá el verdadero valor de *μ*.
 
 Seguidamente vamos a utilizar el contraste de hipótesis para evaluar si el valor medio de la vivienda para los hogares dentro de un bloque (median_house_value) es superior en los bloques cerca de la bahía con respecto a los que NO están cerca de la bahía.
 
@@ -504,17 +462,27 @@ El p-valor obtenido es cero. Y en concreto menor que el nivel de significación.
 
 Diremos que el p-valor es significativo y rechazamos la hipótesis nula en favor de la hipótesis alternativa. Por ende se puede afirmar que el valor medio de la vivienda para los hogares dentro de un bloque (median_house_value) es superior en los bloques cerca de la bahía con respecto a los que NO están cerca de la bahía, y esto se afirma con un 95% de nivel de confianza.
 
-Finalmente, vamos a hallar la correlación entre los ingresos medios para hogares dentro de un bloque de casas (median_income)
-y el valor medio de la vivienda para los hogares dentro de un bloque (median_house_value). Para ello vamos a calcular el coeficiente de correlación de Pearson, que es independiente de la escala de medida de las variables.
+Finalmente realizamos un analisis global de correlaciones entre las columnas numericas de nuestro dataset. Este análisis sera una manera muy gráfica y facil de entender las dependencias de nuestra variable objetivo (precio de las casas con respecto a las atributos predictores)
 
-El coeficiente de correlación de Pearson es como un índice que puede utilizarse para medir el grado de relación de dos variables siempre y cuando ambas sean cuantitativas y continuas.
+Para ello primeramente obtenemos el coeficiente de correlacion entre atributos usando Pearson's el cual nos dirá el grado de relacion lineal entre las columnas de nuestro dataset.
 
 ```{r}
-cor.test(houses$median_income, houses$median_house_value, method=c("pearson"))
+library("Hmisc")
+res <- cor(as.matrix(houses[ , -which(names(houses) %in% c("ocean_proximity"))]))
+res
 ```
 
-En este caso el coeficiente de correlación de Pearson (r) está entre 0 y 1, en concreto 0.58. Podemos decir que existe una correlación positiva entre median_income y median_house_value, aunque dicha correlación es débil.
+Una vez tenemos los coeficientes de correlacion pasamos a representar la matriz de correlación. En la cual vemos lo siguiente:
 
+* *total_bedrooms*, *total_rooms* y *households* están fuertemente correlacionados, por lo que podriamos reducir complejidad de nuestro dataset eliminando dos de ellas sin perder calidad, de igual manera que con el atributo *population* eliminado al inicio de esta practica.  
+* Tambien podemos ver como nuestra variable objetivo tiene una correlacion alta con *median_income* es decir con el salario de los habitantes de las casas en cuestion.  
+* Como curiosidad se podria destacar tambien la correlacion inversa que existe entre la edad de las casas y el tamaño de las casas (total habitaciones, dormitorios etc), lo cual se podria explicar con que casas mas antiguas eran mas pequeñas o incluso unifamiliares.
+
+```{r}
+library(corrplot)
+corrplot(res, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
 
 # 5. Representación de los resultados a partir de tablas y gráficas 
 
@@ -525,7 +493,7 @@ A continuación vamos a realizar una visualización gráfica de los datos del co
 ### 5.1.1 Histogramas
 
 ```{r}
-par(mfrow=c(1,3))
+par(mfrow=c(2,3))
 
 hist(houses$housing_median_age,
 main="Histograma de housing_median_age",     
@@ -550,13 +518,6 @@ col="cornflowerblue",
 )
 
 ###### 
-
-hist(houses$population,
-main="Histograma de population",       
-xlab="número de personas que residen dentro de un bloque",
-ylab="Frecuencia",
-col="firebrick1",
-)
 
 hist(houses$households,
 main="Histograma de households",       
@@ -609,12 +570,9 @@ En el gráfico de **total_bedrooms** se observa una mediana de 435, un mínimo d
 
 ```{r}
 par(mfrow=c(1,3))
-boxplot(houses$population, ylab = "population", col = "firebrick1")
 boxplot(houses$households, ylab = "households", col = "firebrick1")
 boxplot(houses$median_income, ylab = "median_income", col = "firebrick1")
 ```
-
-En el gráfico de **population** se observa una mediana de 1166, un mínimo de 3, un máximo de 3132 y numerosos valores atípicos por encima del máximo.
 
 El gráfico de **households** presenta numerosos valores atípicos en el rango [941, 1092]. La mediana es 409, el mínimo 1 y el máximo 1092.
 
@@ -652,5 +610,12 @@ En el gráfico de **ocean_proximity** se aprecia que el valor que más aparece e
 
 # 6. Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
 
+Como se menciona en el primer apartado, el objetivo del dataset es obtener un modelo que nos ayude a predecir precios de las casas en California, en base a sus caracteristicas. El preprocesado nos ha ayudado por una parte a localizar valores vacios que no permitirian aplicar el modelo correctamente, así como localizar valores outliers que debido a su lejania a la media de los valores pueden introducir un sesgo en el modelo usado (por ejemplo si usamos arboles de decision o clusterizamos con K-means).
 
+Por otra parte el analisis estádistico llevado a cabo sobre la muestra nos arroja varias conclusiones importantes que sin ser el modelo final si puede servirnos de guia:
 
+* Muchas columnas estan correlacionadas fuertemente y por tanto el dataset puede reducirse bastante mejorando el tiempo de procesado futuro.
+* Podemos afirmar que el valor medio de la vivienda para los hogares dentro de un bloque es superior en los bloques cerca de la bahía con respecto a los que NO están cerca de la bahía.
+* El valor medio de la vivienda tiene una correlacion con el valor del salario medio (median_income)
+
+Asi por ejemplo para una muestra de casa localizada cerca de la bahia y con salarios medios altos de los habitantes podremos asegurar con un nivel alto de confianza que el precio de la casa tambien será alto. Esto se podria ver facilmene una vez apliquemos un modelo a nuestro dataset.
