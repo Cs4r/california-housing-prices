@@ -3,7 +3,7 @@
 Precios medios de la vivienda para los distritos de California provenientes del censo de 1990
 
 ## Ficheros
-El repositorio cuenta con los siguientes ficheros de código:
+El repositorio cuenta con los siguientes ficheros:
 * **data/housing.csv**: fichero CSV con los datos originales
 * **data/housing_preprocessed.csv**: fichero CSV con los datos finales preprocesados
 * **housing.Rmd**: código R generado para analizar los datos
