@@ -3,29 +3,24 @@ title: 'Práctica 2: Limpieza y análisis de datos'
 author: "Autor: César Aguilera y Daniel Velasco"
 date: "Diciembre 2020"
 output:
-  pdf_document:
-    highlight: zenburn
-    toc: yes
   html_document:
-    highlight: default
-    number_sections: yes
-    theme: cosmo
-    toc: yes
-    toc_depth: 2
-  word_document: default
+    df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(Rcmdr)
 library(nortest)
+library("ggpubr")
+library("Hmisc")
+library(corrplot)
 ```
 
 ******
 # Introducción  
 
-En esta práctica se elabora un caso práctico orientado a aprender a identificar los datos
-relevantes para un proyecto analítico y usar las herramientas de integración, limpieza, validación y análisis de las mismas.
+En esta práctica se elabora un caso práctico orientado a aprender a identificar los datos relevantes para un proyecto analítico y usar las herramientas de integración, limpieza, validación y análisis de las mismas.
 
 ****** 
 
@@ -117,7 +112,6 @@ En este paso intentaremos seleccionar solo las caracteristicas de cada muestra q
 Podemos hacer un analisis rapido de la correlacion mediante el analisis del coeficiente de Pearson para demostrarlo.
 
 ```{r}
-library("ggpubr")
 ggscatter(houses, x = "households", y = "population", 
           add = "reg.line", conf.int = TRUE, 
           cor.coef = TRUE, cor.method = "pearson",
@@ -467,7 +461,6 @@ Finalmente realizamos un analisis global de correlaciones entre las columnas num
 Para ello primeramente obtenemos el coeficiente de correlacion entre atributos usando Pearson's el cual nos dirá el grado de relacion lineal entre las columnas de nuestro dataset.
 
 ```{r}
-library("Hmisc")
 res <- cor(as.matrix(houses[ , -which(names(houses) %in% c("ocean_proximity"))]))
 res
 ```
@@ -479,7 +472,6 @@ Una vez tenemos los coeficientes de correlacion pasamos a representar la matriz 
 * Como curiosidad se podria destacar tambien la correlacion inversa que existe entre la edad de las casas y el tamaño de las casas (total habitaciones, dormitorios etc), lo cual se podria explicar con que casas mas antiguas eran mas pequeñas o incluso unifamiliares.
 
 ```{r}
-library(corrplot)
 corrplot(res, type = "upper", order = "hclust", 
          tl.col = "black", tl.srt = 45)
 ```
@@ -619,3 +611,16 @@ Por otra parte el analisis estádistico llevado a cabo sobre la muestra nos arro
 * El valor medio de la vivienda tiene una correlacion con el valor del salario medio (median_income)
 
 Asi por ejemplo para una muestra de casa localizada cerca de la bahia y con salarios medios altos de los habitantes podremos asegurar con un nivel alto de confianza que el precio de la casa tambien será alto. Esto se podria ver facilmene una vez apliquemos un modelo a nuestro dataset.
+
+# 7. Código
+
+El código de la práctica se encuentra disponible en https://github.com/Cs4r/california-housing-prices
+
+# 8. Contribuciones
+  
+| Contribuciones  | Firma |
+| :------------ | :-----------: | 
+| Investigación previa     | César A. y Daniel V.          |
+| Redacción de las respuestas     | César A. y Daniel V.          |
+| Desarrollo código      | César A. y Daniel V.          |
+
