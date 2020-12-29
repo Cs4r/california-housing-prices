@@ -80,6 +80,8 @@ Los datos contienen información sobre el censo de California de 1990. Aunque pu
 
 El dataset contiene datos refrentes a casas pertenecientes a distrito determinado de California y algunas estadísticas resumidas sobre ellas basadas en los datos del censo de 1990. Debemos tener en cuenta que los datos están limpios, es decir, requieren limpieza previa.
 
+El **problema a resolver** usando el dataset es el **analisis y prediccion de los precios de las casas en California** en base a factores como el tamaño, localizacion, nivel economico de los habitantes etc.
+
 El dataset tiene 20640 filas y 10 columnas. Las columnas son las siguientes:
 
 * **longitude**: una medida de qué tan al oeste está una casa; un valor más alto está más al oeste
@@ -202,7 +204,7 @@ Ahora vamos a proceder al analisis de los valores extremos, este estudio permite
 
 Para el analisis podemos usar los graficos de cajas donde se identifica la media el primer y tercer cuartil asi como el rango de hasta el 1.5*IQR (InterQuantile Range). Cualquier valor mas alejado de este rango se considerará outlier.
 
-Podemos ver que las columnas analizadas a continuación tienen valores outliers (fuera del rango 3Q+1.5IQR) y debido a la cantidad de valores outliers estimamos que la mejor manera de solucionar el problema sería **modificando los valores extremos por el valor del 3º cuartil + 1.5 veces el IQR (interquartile range)**
+Podemos ver que las columnas analizadas a continuación tienen valores outliers (fuera del rango 3Q+1.5IQR) y debido a la cantidad de valores outliers estimamos que **los valores marcados como outliers son realmente valores validos ya que los atributos predictores probablemente no sigan una fdp normal (gaussiana))**
 
 ```{r fig1, fig.height = 10, fig.width = 10}
 total_rooms <- houses$total_rooms
@@ -222,45 +224,8 @@ boxplot(median_income, horizontal=TRUE)
 
 ### 3.2.2 Tratamiento de valores extremos
 
-Primeramente escribimos una funcion en la cual dada una columna de nuestro dataframe obtiene el valor máximo para considerar al valor como outlier (en base a su IQR y tercer cuartil) e inputa este valor maximo a todos los outliers de la columna.
+Como se ha mencionado en el analisis de outliers en el apartado anterior, se decide **no eliminar ningun valor debido al gran numero de muestras que se encuentran fuera del rango 3Q+1.5IQR**. Esta cantidad de muestras nos hace pensar que realmente los atributos no siguen una distribucion gaussiana y por tanto el estudio de los outliers por cuartiles deja de tener sentido.
 
-```{r}
-# reemplazo de outliers
-outliersReplace <- function(dataColumn){
-  summ_col = summary(dataColumn)
-  iqr = summ_col["3rd Qu."]-summ_col["1st Qu."]
-  highLimit = summ_col["3rd Qu."] + 1.5 * iqr
-  dataColumn[dataColumn > highLimit] <- highLimit
-  dataColumn     #devolvemos la columna     
-}
-```
-
-Aplicamos la funcion a todas las columnas con outliers.
-
-```{r}
-houses$total_rooms <- outliersReplace(houses$total_rooms)
-houses$total_bedrooms <- outliersReplace(houses$total_bedrooms)
-houses$households <- outliersReplace(houses$households)
-houses$median_income <- outliersReplace(houses$median_income)
-```
-
-Vemos de nuevo los histogramas y los outliers en los diagramas de caja. Comprobando que ahora ya no existen outliers y que estos se han concentrado en el rango del Q3.
-
-```{r fig2, fig.height = 10, fig.width = 10}
-total_rooms <- houses$total_rooms
-total_bedrooms <- houses$total_bedrooms
-households <- houses$households
-median_income <- houses$median_income
-par(mfrow=c(4,2))
-hist(total_rooms)
-boxplot(total_rooms, horizontal=TRUE)
-hist(total_bedrooms)
-boxplot(total_bedrooms, horizontal=TRUE)
-hist(households)
-boxplot(households, horizontal=TRUE)
-hist(median_income)
-boxplot(median_income, horizontal=TRUE)
-```
 
 ## 3.3. Exportacion de los datos preprocesados
 
@@ -458,17 +423,17 @@ Diremos que el p-valor es significativo y rechazamos la hipótesis nula en favor
 
 Finalmente realizamos un analisis global de correlaciones entre las columnas numericas de nuestro dataset. Este análisis sera una manera muy gráfica y facil de entender las dependencias de nuestra variable objetivo (precio de las casas con respecto a las atributos predictores)
 
-Para ello primeramente obtenemos el coeficiente de correlacion entre atributos usando Pearson's el cual nos dirá el grado de relacion lineal entre las columnas de nuestro dataset.
+Para ello primeramente obtenemos el coeficiente de correlacion entre atributos el cual nos dirá el grado de relacion lineal entre las columnas de nuestro dataset. La correlacion la generamos usando el metodo de **Kendall** que a diferencia del metodo de **Pearson** no necesariamente requiere o supone una normalidad en nuestros atributos.
 
 ```{r}
-res <- cor(as.matrix(houses[ , -which(names(houses) %in% c("ocean_proximity"))]))
+res <- cor(as.matrix(houses[ , -which(names(houses) %in% c("ocean_proximity"))]), method = "kendall")
 res
 ```
 
 Una vez tenemos los coeficientes de correlacion pasamos a representar la matriz de correlación. En la cual vemos lo siguiente:
 
 * *total_bedrooms*, *total_rooms* y *households* están fuertemente correlacionados, por lo que podriamos reducir complejidad de nuestro dataset eliminando dos de ellas sin perder calidad, de igual manera que con el atributo *population* eliminado al inicio de esta practica.  
-* Tambien podemos ver como nuestra variable objetivo tiene una correlacion alta con *median_income* es decir con el salario de los habitantes de las casas en cuestion.  
+* Tambien podemos ver como *nuestra variable objetivo tiene una correlacion alta con median_income* es decir con el salario de los habitantes de las casas en cuestion.  
 * Como curiosidad se podria destacar tambien la correlacion inversa que existe entre la edad de las casas y el tamaño de las casas (total habitaciones, dormitorios etc), lo cual se podria explicar con que casas mas antiguas eran mas pequeñas o incluso unifamiliares.
 
 ```{r}
@@ -610,7 +575,21 @@ Por otra parte el analisis estádistico llevado a cabo sobre la muestra nos arro
 * Podemos afirmar que el valor medio de la vivienda para los hogares dentro de un bloque es superior en los bloques cerca de la bahía con respecto a los que NO están cerca de la bahía.
 * El valor medio de la vivienda tiene una correlacion con el valor del salario medio (median_income)
 
-Asi por ejemplo para una muestra de casa localizada cerca de la bahia y con salarios medios altos de los habitantes podremos asegurar con un nivel alto de confianza que el precio de la casa tambien será alto. Esto se podria ver facilmene una vez apliquemos un modelo a nuestro dataset.
+Asi por ejemplo para una muestra de casa localizada cerca de la bahia y con salarios medios altos de los habitantes podremos asegurar con un nivel alto de confianza que el precio de la casa tambien será alto. 
+
+Generamos a continuacion una **regresion lineal** sobre nuestros datos, usando todas las variables como predictoras y *median_house_value* como atributo a predecir.   
+Podemos ver en el **summary** lo siguiente:  
+
+* Como habiamos pensado el coeficiente del atributo *ocean_proximityNEAR OCEAN* es positivo y alto  
+* Tambien como habiamos pensado el coeficiente del atributo *median_income* es positivo y alto  
+ 
+Esto implica que un cambio de estos valores afecta e manera directamente proporcional al precio.
+
+```{r}
+#generamos una regresion lineal que use todas las variables para predecir el valor medio de las casas
+modlm = lm(median_house_value~., data = houses)
+summary(modlm)
+```
 
 # 7. Código
 
